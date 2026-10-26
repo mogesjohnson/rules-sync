@@ -1,6 +1,10 @@
 #!/usr/bin/env node
 import { loadConfig } from './config.js';
+import { mkdirSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { analyse, hasDrift } from './sync.js';
+import { unifiedDiff } from './diff.js';
+import { applyPr, planPr } from './prs.js';
 
 export interface Args { command: string; config: string; out: string; yes: boolean; cache: string; local: Record<string, string> }
 
@@ -59,6 +63,32 @@ async function main(): Promise<number> {
       }
       console.log(drift ? `check: drift in ${repos.filter(hasDrift).length}/${repos.length} repos` : 'check: all repos in sync');
       return drift ? 1 : 0;
+    }
+    case 'plan': {
+      const { repos } = analyse(config, opts);
+      mkdirSync(args.out, { recursive: true });
+      for (const r of repos) {
+        const patch = r.files.filter((f) => f.status !== 'in-sync').map((f) => unifiedDiff(f.file, f.current, f.desired)).join('');
+        const name = join(args.out, `${r.target.repo.replace('/', '__')}.diff`);
+        writeFileSync(name, patch);
+        console.log(`${r.target.repo}: ${patch ? `${patch.split('\n').length - 1} diff lines -> ${name}` : 'in sync, empty diff'} `);
+      }
+      return repos.some(hasDrift) ? 1 : 0;
+    }
+    case 'open-prs': {
+      const { repos } = analyse(config, opts);
+      for (const r of repos.filter(hasDrift)) {
+        const p = planPr(config, r);
+        if (!args.yes) {
+          console.log(`=== DRY RUN ${p.repo} (pass --yes to apply) ===`);
+          console.log(`branch: ${p.branch}\n--- commit message ---\n${p.commitMessage}\n--- PR title ---\n${p.title}\n--- PR body ---\n${p.body}--- commands ---`);
+          for (const c of p.commands) console.log(`  ${c}`);
+        } else {
+          console.log(`${p.repo}: ${applyPr(p, r)}`);
+        }
+      }
+      if (!repos.some(hasDrift)) console.log('open-prs: nothing to do, all repos in sync');
+      return 0;
     }
     default:
       console.error(`unknown command: ${args.command} (config ok: ${config.targets.length} targets)\n\n${USAGE}`);
