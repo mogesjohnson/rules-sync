@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import { loadConfig } from './config.js';
+import { analyse, hasDrift } from './sync.js';
 
 export interface Args { command: string; config: string; out: string; yes: boolean; cache: string; local: Record<string, string> }
 
@@ -42,7 +43,23 @@ async function main(): Promise<number> {
     return args.command ? 0 : 2;
   }
   const config = loadConfig(args.config);
+  const opts = { cache: args.cache, local: args.local };
   switch (args.command) {
+    case 'check': {
+      const { repos } = analyse(config, opts);
+      let drift = 0;
+      for (const r of repos) {
+        const n = r.files.filter((f) => f.status !== 'in-sync').length;
+        drift += n;
+        console.log(`${r.target.repo}: ${n ? `${n} file(s) out of sync` : 'in sync'}`);
+        for (const f of r.files) {
+          console.log(`  ${f.status.padEnd(8)} ${f.file}`);
+          for (const w of f.warnings) console.log(`           warning: ${w}`);
+        }
+      }
+      console.log(drift ? `check: drift in ${repos.filter(hasDrift).length}/${repos.length} repos` : 'check: all repos in sync');
+      return drift ? 1 : 0;
+    }
     default:
       console.error(`unknown command: ${args.command} (config ok: ${config.targets.length} targets)\n\n${USAGE}`);
       return 2;
