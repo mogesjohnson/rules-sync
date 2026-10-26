@@ -1,0 +1,21 @@
+{
+  "name": "rules-sync",
+  "version": "0.1.0",
+  "description": "Keep repos made from the BEST-OF-AI-DEV template in sync with it",
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "rules-sync": "dist/cli.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/cli.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "devDependencies": {
+    "@types/node": "^20.19.43",
+    "typescript": "^5.9.3"
+  }
+}

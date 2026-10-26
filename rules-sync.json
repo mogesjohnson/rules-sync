@@ -1,0 +1,8 @@
+{
+  "template": { "repo": "mogesjohnson/BEST-OF-AI-DEV", "path": "template/", "ref": "ec56890309fd8af5c98f6e0b237468b924d3ad5a" },
+  "targets": [
+    { "repo": "mogesjohnson/spec-to-tests" },
+    { "repo": "mogesjohnson/history-scrub" }
+  ],
+  "files": ["AGENTS.md", "RULES.md", "CLAUDE.md", "GEMINI.md", ".githooks/*", "scripts/check/*.mjs", ".github/pull_request_template.md"]
+}
